@@ -3,90 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简单的 JavaScript 音乐播放器</title>
+    <title>MuPlayer - 简洁音乐播放器</title>
     <link rel="stylesheet" href="style.css">
-    <!-- 引入 FontAwesome 图标库 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <!-- 加载指示器 -->
+    <div id="loading-indicator" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
+    </div>
+
     <div class="player-container">
         <!-- 顶部搜索栏 -->
-        <div class="search-container">
-            <input type="text" id="search-input" placeholder="搜索歌曲或歌手...">
-            <button id="search-btn"><i class="fas fa-search"></i></button>
-        </div>
+        <header class="search-container">
+            <div class="search-input-wrapper">
+                <input type="text" id="search-input" placeholder="搜索歌曲或歌手...">
+                <button id="search-btn" title="搜索">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button id="clear-search-btn" class="clear-search-btn" title="清除搜索" style="display: none;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </header>
 
         <!-- 播放器主体 -->
-        <div class="player-main">
+        <main class="player-main">
             <!-- 左侧：专辑封面和歌曲信息 -->
-            <div class="album-info">
+            <section class="album-section">
                 <div class="album-cover">
-                    <img id="album-art" src="assets/pexels-photo-2264753.jpeg" alt="专辑封面">
-                </div>
-                <div class="song-info">
-                    <h2 id="song-title">未播放</h2>
-                    <p id="song-artist">未知歌手</p>
-                </div>
-                <div class="time-info">
-                    <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
-                </div>
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div id="progress"></div>
+                    <img id="album-art" src="assets/default-cover.jpg" alt="专辑封面">
+                    <div class="album-overlay">
+                        <button id="main-play-btn" class="album-play-btn" title="播放/暂停">
+                            <i class="fas fa-play"></i>
+                        </button>
                     </div>
                 </div>
-            </div>
+                
+                <div class="song-info">
+                    <h1 id="song-title">选择音乐开始播放</h1>
+                    <p id="song-artist">未知歌手</p>
+                    <div class="song-meta">
+                        <span id="current-time">0:00</span>
+                        <span class="separator">/</span>
+                        <span id="total-time">0:00</span>
+                    </div>
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar">
+                        <div id="progress"></div>
+                        <div class="progress-handle"></div>
+                    </div>
+                </div>
+            </section>
 
             <!-- 右侧：播放列表 -->
-            <div class="playlist-container">
+            <aside class="playlist-container">
                 <div class="playlist-header">
-                    <h3>播放列表</h3>
+                    <h2>播放列表</h2>
                     <div class="playlist-controls">
-                        <button id="add-music-btn"><i class="fas fa-plus"></i> 添加音乐</button>
-                        <button id="clear-playlist-btn"><i class="fas fa-trash"></i> 清空列表</button>
+                        <button id="add-music-btn" title="添加音乐">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button id="shuffle-btn" title="随机播放">
+                            <i class="fas fa-random"></i>
+                        </button>
+                        <button id="clear-playlist-btn" title="清空列表">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </div>
-                <ul id="playlist"></ul>
-            </div>
-        </div>
+                <div class="playlist-content">
+                    <ul id="playlist"></ul>
+                    <div id="playlist-empty" class="playlist-empty">
+                        <i class="fas fa-music"></i>
+                        <p>播放列表为空</p>
+                        <button class="add-music-prompt">添加音乐</button>
+                    </div>
+                </div>
+            </aside>
+        </main>
 
         <!-- 底部控制栏 -->
-        <div class="controls">
-            <div class="play-mode">
+        <footer class="controls">
+            <div class="control-group left">
                 <button id="play-mode-btn" title="播放模式：顺序播放">
                     <i class="fas fa-exchange-alt"></i>
                 </button>
             </div>
+            
             <div class="main-controls">
-                <button id="prev-btn"><i class="fas fa-step-backward"></i></button>
-                <button id="play-btn" class="play-pause-btn">
+                <button id="prev-btn" title="上一首">
+                    <i class="fas fa-step-backward"></i>
+                </button>
+                <button id="play-btn" class="play-pause-btn" title="播放/暂停">
                     <i class="fas fa-play"></i>
                 </button>
-                <button id="next-btn"><i class="fas fa-step-forward"></i></button>
+                <button id="next-btn" title="下一首">
+                    <i class="fas fa-step-forward"></i>
+                </button>
             </div>
-            <div class="volume-control">
-                <i class="fas fa-volume-up" id="volume-icon"></i>
+            
+            <div class="control-group right">
+                <button id="volume-icon" class="volume-btn" title="静音/取消静音">
+                    <i class="fas fa-volume-up"></i>
+                </button>
                 <div class="volume-slider">
-                    <div class="volume-bar">
+                    <div class="volume-bar" id="volume-bar">
                         <div id="volume-level"></div>
+                        <div class="volume-handle"></div>
                     </div>
                 </div>
+                <button id="volume-down-btn" class="volume-adjust-btn" title="减小音量">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button id="volume-up-btn" class="volume-adjust-btn" title="增大音量">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <span id="volume-text">80%</span>
             </div>
-        </div>
+        </footer>
     </div>
 
-    <!-- 主题切换按钮 -->
-    <button id="theme-toggle" class="theme-toggle">
-        <i class="fas fa-moon"></i>
-    </button>
+    <!-- 浮动按钮 -->
+    <div class="floating-buttons">
+        <button id="theme-toggle" title="切换主题">
+            <i class="fas fa-moon"></i>
+        </button>
+        <button id="fullscreen-btn" title="全屏模式">
+            <i class="fas fa-expand"></i>
+        </button>
+    </div>
+
+    <!-- 版权信息 -->
+    <div class="copyright-footer">
+        Copyright &copy; 2022~2025 <a href="https://wcowin.work/" target="_blank" rel="noopener noreferrer">Wcowin</a>
+    </div>
 
     <!-- 隐藏的文件输入 -->
     <input type="file" id="music-file-input" accept="audio/*" multiple style="display: none;">
+    
+    <!-- 音频播放器 -->
+    <audio id="audio-player" preload="metadata"></audio>
 
-    <!-- 音频元素 -->
-    <audio id="audio-player"></audio>
+    <!-- 通知容器 -->
+    <div id="notification-container"></div>
 
-    <!-- JavaScript 文件 -->
     <script src="main.js"></script>
 </body>
 </html>

@@ -17,6 +17,14 @@ class MusicPlayer {
             prevBtn: document.getElementById('prev-btn'),
             nextBtn: document.getElementById('next-btn'),
             playModeBtn: document.getElementById('play-mode-btn'),
+            // 移动端控制按钮
+            mobilePlayBtn: document.getElementById('mobile-play-btn'),
+            mobilePrevBtn: document.getElementById('mobile-prev-btn'),
+            mobileNextBtn: document.getElementById('mobile-next-btn'),
+            mobilePlayModeBtn: document.getElementById('mobile-play-mode-btn'),
+            mobileVolumeIcon: document.getElementById('mobile-volume-icon'),
+            mobileVolumeDownBtn: document.getElementById('mobile-volume-down-btn'),
+            mobileVolumeUpBtn: document.getElementById('mobile-volume-up-btn'),
             albumArt: document.getElementById('album-art'),
             songTitle: document.getElementById('song-title'),
             songArtist: document.getElementById('song-artist'),
@@ -24,20 +32,24 @@ class MusicPlayer {
             totalTimeEl: document.getElementById('total-time'),
             progressBar: document.getElementById('progress-bar'),
             progress: document.getElementById('progress'),
+            progressTooltip: document.getElementById('progress-tooltip'),
+            progressContainer: document.querySelector('.progress-container'),
             volumeBar: document.getElementById('volume-bar'),
             volumeLevel: document.getElementById('volume-level'),
             volumeIcon: document.getElementById('volume-icon'),
             volumeText: document.getElementById('volume-text'),
-            volumeDownBtn: document.getElementById('volume-down-btn'), // 新增
-            volumeUpBtn: document.getElementById('volume-up-btn'),     // 新增
+            volumeDownBtn: document.getElementById('volume-down-btn'),
+            volumeUpBtn: document.getElementById('volume-up-btn'),
             playlist: document.getElementById('playlist'),
             addMusicBtn: document.getElementById('add-music-btn'),
             clearPlaylistBtn: document.getElementById('clear-playlist-btn'),
             shuffleBtn: document.getElementById('shuffle-btn'),
+            locateCurrentBtn: document.getElementById('locate-current-btn'),
             musicFileInput: document.getElementById('music-file-input'),
             searchInput: document.getElementById('search-input'),
             searchBtn: document.getElementById('search-btn'),
             clearSearchBtn: document.getElementById('clear-search-btn'),
+            searchSuggestions: document.getElementById('search-suggestions'),
             themeToggle: document.getElementById('theme-toggle'),
             fullscreenBtn: document.getElementById('fullscreen-btn'),
             loadingIndicator: document.getElementById('loading-indicator'),
@@ -54,7 +66,8 @@ class MusicPlayer {
         const requiredElements = [
             'audioPlayer', 'playBtn', 'mainPlayBtn', 'prevBtn', 'nextBtn',
             'albumArt', 'songTitle', 'songArtist', 'currentTimeEl', 'totalTimeEl',
-            'progressBar', 'progress', 'playlist', 'searchInput'
+            'progressBar', 'progress', 'progressTooltip', // Added
+            'playlist', 'searchInput', 'searchSuggestions' // Added searchSuggestions
         ];
         const missing = requiredElements.filter(key => !this.elements[key]);
         if (missing.length > 0) {
@@ -80,6 +93,8 @@ class MusicPlayer {
         this.playModeIndex = 0;
         this.volumeStep = 0.1; // 新增：音量调节步长
         this.defaultCoverArt = 'assets/default-album-art.png'; // 默认专辑封面
+        this.isDraggingProgress = false;
+        this.wasPlayingBeforeDrag = false;
     }
 
     // 绑定事件监听器
@@ -90,6 +105,15 @@ class MusicPlayer {
         this.safeAddEventListener(this.elements.prevBtn, 'click', () => this.playPrevSong());
         this.safeAddEventListener(this.elements.nextBtn, 'click', () => this.playNextSong());
         this.safeAddEventListener(this.elements.playModeBtn, 'click', () => this.togglePlayMode());
+
+        // 移动端控制按钮事件绑定
+        this.safeAddEventListener(this.elements.mobilePlayBtn, 'click', () => this.togglePlay());
+        this.safeAddEventListener(this.elements.mobilePrevBtn, 'click', () => this.playPrevSong());
+        this.safeAddEventListener(this.elements.mobileNextBtn, 'click', () => this.playNextSong());
+        this.safeAddEventListener(this.elements.mobilePlayModeBtn, 'click', () => this.togglePlayMode());
+        this.safeAddEventListener(this.elements.mobileVolumeIcon, 'click', () => this.toggleMute());
+        this.safeAddEventListener(this.elements.mobileVolumeDownBtn, 'click', () => this.adjustVolume(-this.volumeStep));
+        this.safeAddEventListener(this.elements.mobileVolumeUpBtn, 'click', () => this.adjustVolume(this.volumeStep));
 
         // 音频事件
         if (this.elements.audioPlayer) {
@@ -104,6 +128,9 @@ class MusicPlayer {
 
         // 进度条和音量控制
         this.safeAddEventListener(this.elements.progressBar, 'click', (e) => this.setProgress(e));
+        this.safeAddEventListener(this.elements.progressBar, 'mousedown', (e) => this.startProgressDrag(e));
+        this.safeAddEventListener(this.elements.progressContainer, 'mousemove', (e) => this.updateProgressTooltip(e));
+        this.safeAddEventListener(this.elements.progressContainer, 'mouseleave', () => this.hideProgressTooltip());
         this.safeAddEventListener(this.elements.volumeBar, 'click', (e) => this.setVolume(e));
         this.safeAddEventListener(this.elements.volumeIcon, 'click', () => this.toggleMute());
         this.safeAddEventListener(this.elements.volumeDownBtn, 'click', () => this.adjustVolume(-this.volumeStep)); // 新增
@@ -113,6 +140,7 @@ class MusicPlayer {
         this.safeAddEventListener(this.elements.addMusicBtn, 'click', () => this.addLocalMusic());
         this.safeAddEventListener(this.elements.clearPlaylistBtn, 'click', () => this.clearPlaylist());
         this.safeAddEventListener(this.elements.shuffleBtn, 'click', () => this.shufflePlaylist());
+        this.safeAddEventListener(this.elements.locateCurrentBtn, 'click', () => this.locateCurrentSong()); // 新增
         this.safeAddEventListener(this.elements.musicFileInput, 'change', (e) => this.handleFileSelect(e));
 
         // 搜索功能
@@ -121,7 +149,20 @@ class MusicPlayer {
         if (this.elements.searchInput) {
             this.elements.searchInput.addEventListener('input', () => this.handleSearchInput());
             this.elements.searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.searchSongs();
+                if (e.key === 'Enter') {
+                    this.searchSongs();
+                    if (this.elements.searchSuggestions) {
+                        this.elements.searchSuggestions.style.display = 'none'; // Hide suggestions on enter
+                    }
+                }
+            });
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', (e) => {
+                if (this.elements.searchSuggestions && this.elements.searchInput) {
+                    if (!this.elements.searchInput.contains(e.target) && !this.elements.searchSuggestions.contains(e.target)) {
+                        this.elements.searchSuggestions.style.display = 'none';
+                    }
+                }
             });
         }
 
@@ -382,6 +423,27 @@ class MusicPlayer {
         playlistItems.forEach((item, i) => {
             item.classList.toggle('active', i === this.currentSongIndex);
         });
+
+        // 更新定位按钮状态
+        this.updateLocateButtonState();
+    }
+
+    // 新增：更新定位按钮状态
+    updateLocateButtonState() {
+        if (!this.elements.locateCurrentBtn) return;
+
+        // 如果在搜索状态或没有歌曲，禁用按钮
+        const isDisabled = this.songs.length === 0;
+        this.elements.locateCurrentBtn.disabled = isDisabled;
+        
+        // 根据搜索状态更新按钮样式和提示
+        if (this.isSearching) {
+            this.elements.locateCurrentBtn.title = '退出搜索并定位当前播放';
+            this.elements.locateCurrentBtn.classList.add('search-mode');
+        } else {
+            this.elements.locateCurrentBtn.title = '定位当前播放';
+            this.elements.locateCurrentBtn.classList.remove('search-mode');
+        }
     }
 
     // 播放/暂停切换
@@ -456,7 +518,7 @@ class MusicPlayer {
 
     // 更新播放模式UI
     updatePlayModeUI() {
-        if (!this.elements.playModeBtn) return;
+        if (!this.elements.playModeBtn && !this.elements.mobilePlayModeBtn) return;
 
         const modeIcons = {
             sequence: 'fa-exchange-alt',
@@ -470,8 +532,18 @@ class MusicPlayer {
             loop: '循环播放'
         };
 
-        this.elements.playModeBtn.innerHTML = `<i class="fas ${modeIcons[this.playMode]}"></i>`;
-        this.elements.playModeBtn.title = `播放模式：${modeTexts[this.playMode]}`;
+        const iconHtml = `<i class="fas ${modeIcons[this.playMode]}"></i>`;
+        const titleText = `播放模式：${modeTexts[this.playMode]}`;
+
+        if (this.elements.playModeBtn) {
+            this.elements.playModeBtn.innerHTML = iconHtml;
+            this.elements.playModeBtn.title = titleText;
+        }
+        // 更新移动端播放模式按钮
+        if (this.elements.mobilePlayModeBtn) {
+            this.elements.mobilePlayModeBtn.innerHTML = iconHtml;
+            this.elements.mobilePlayModeBtn.title = titleText;
+        }
     }
 
     // 音频播放事件
@@ -525,6 +597,10 @@ class MusicPlayer {
         if (this.elements.mainPlayBtn) {
             this.elements.mainPlayBtn.innerHTML = `<i class="fas ${icon}"></i>`;
         }
+        // 更新移动端播放按钮
+        if (this.elements.mobilePlayBtn) {
+            this.elements.mobilePlayBtn.innerHTML = `<i class="fas ${icon}"></i>`;
+        }
     }
 
     // 开始进度更新
@@ -545,14 +621,14 @@ class MusicPlayer {
 
     // 更新进度条
     updateProgress() {
-        if (!this.elements.audioPlayer) return;
+        if (!this.elements.audioPlayer || this.isDraggingProgress) return;
 
         const { duration, currentTime } = this.elements.audioPlayer;
         if (duration && !isNaN(duration)) {
             // 更新进度条
             const progressPercent = (currentTime / duration) * 100;
             if (this.elements.progress) {
-                this.elements.progress.style.width = `${progressPercent}%`;
+                this.elements.progress.style.width = `${Math.max(0, Math.min(100, progressPercent))}%`;
             }
             
             // 更新时间显示
@@ -563,7 +639,10 @@ class MusicPlayer {
                 this.elements.totalTimeEl.textContent = this.formatTime(duration);
             }
         } else {
-            // 没有duration时也要清空显示
+            // 没有duration时的处理
+            if (this.elements.progress) {
+                this.elements.progress.style.width = '0%';
+            }
             if (this.elements.currentTimeEl) {
                 this.elements.currentTimeEl.textContent = this.formatTime(this.elements.audioPlayer.currentTime || 0);
             }
@@ -573,17 +652,94 @@ class MusicPlayer {
         }
     }
 
-    // 设置进度
-    setProgress(e) {
-        if (!this.elements.progressBar || !this.elements.audioPlayer) return;
+    // 新增：更新进度条悬浮提示位置和内容
+    updateProgressTooltip(e) {
+        if (!this.elements.progressBar || !this.elements.progressTooltip || !this.elements.audioPlayer) return;
 
-        const width = this.elements.progressBar.clientWidth;
-        const clickX = e.offsetX;
+        const progressBarRect = this.elements.progressBar.getBoundingClientRect();
+        const containerRect = this.elements.progressContainer.getBoundingClientRect();
+        const hoverX = e.clientX - progressBarRect.left;
+        const barWidth = progressBarRect.width;
+        
+        let hoverPercent = Math.max(0, Math.min(1, hoverX / barWidth));
+
+        const duration = this.elements.audioPlayer.duration;
+        if (duration && !isNaN(duration)) {
+            const hoverTime = hoverPercent * duration;
+            this.elements.progressTooltip.textContent = this.formatTime(hoverTime);
+        } else {
+            this.elements.progressTooltip.textContent = '0:00';
+        }
+
+        // 相对于进度容器定位
+        const containerX = e.clientX - containerRect.left;
+        const tooltipWidth = this.elements.progressTooltip.offsetWidth;
+        let tooltipLeft = containerX;
+
+        // 确保提示框不超出容器边界
+        tooltipLeft = Math.max(tooltipWidth / 2, tooltipLeft);
+        tooltipLeft = Math.min(containerRect.width - tooltipWidth / 2, tooltipLeft);
+        
+        this.elements.progressTooltip.style.left = `${tooltipLeft}px`;
+    }
+
+    // 新增：隐藏进度条提示
+    hideProgressTooltip() {
+        if (this.elements.progressTooltip) {
+            this.elements.progressTooltip.style.opacity = '0';
+            this.elements.progressTooltip.style.visibility = 'hidden';
+        }
+    }
+
+    // 优化：设置进度
+    setProgress(e) {
+        if (!this.elements.progressBar || !this.elements.audioPlayer || this.isDraggingProgress) return;
+
+        const rect = this.elements.progressBar.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const width = rect.width;
         const duration = this.elements.audioPlayer.duration;
         
-        if (duration && !isNaN(duration)) {
-            this.elements.audioPlayer.currentTime = (clickX / width) * duration;
+        if (duration && !isNaN(duration) && width > 0) {
+            const newTime = Math.max(0, Math.min(duration, (clickX / width) * duration));
+            this.elements.audioPlayer.currentTime = newTime;
         }
+    }
+
+    // 新增：开始拖拽进度条
+    startProgressDrag(e) {
+        if (!this.elements.progressBar || !this.elements.audioPlayer) return;
+        
+        e.preventDefault();
+        this.isDraggingProgress = true;
+        this.wasPlayingBeforeDrag = this.isPlaying;
+        
+        // 暂停播放以避免冲突
+        if (this.isPlaying) {
+            this.pauseSong();
+        }
+
+        const onMouseMove = (e) => {
+            if (!this.isDraggingProgress) return;
+            this.setProgress(e);
+        };
+
+        const onMouseUp = () => {
+            this.isDraggingProgress = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            
+            // 如果之前在播放，恢复播放
+            if (this.wasPlayingBeforeDrag) {
+                this.playSong();
+            }
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        
+        // 立即设置一次进度
+        this.setProgress(e);
     }
 
     // 更新音量UI
@@ -599,15 +755,22 @@ class MusicPlayer {
             bar.style.setProperty('--volume-percent', (volume * 100).toFixed(1));
         }
         // 更新音量图标
-        if (this.elements.volumeIcon) {
-            let iconClass = 'fa-volume-up';
-            if (volume === 0) {
-                iconClass = 'fa-volume-mute';
-            } else if (volume < 0.5) {
-                iconClass = 'fa-volume-down';
-            }
-            this.elements.volumeIcon.innerHTML = `<i class="fas ${iconClass}"></i>`;
+        let iconClass = 'fa-volume-up';
+        if (volume === 0) {
+            iconClass = 'fa-volume-mute';
+        } else if (volume < 0.5) {
+            iconClass = 'fa-volume-down';
         }
+        
+        const iconHtml = `<i class="fas ${iconClass}"></i>`;
+        if (this.elements.volumeIcon) {
+            this.elements.volumeIcon.innerHTML = iconHtml;
+        }
+        // 更新移动端音量图标
+        if (this.elements.mobileVolumeIcon) {
+            this.elements.mobileVolumeIcon.innerHTML = iconHtml;
+        }
+        
         // 更新音量文本
         if (this.elements.volumeText) {
             this.elements.volumeText.textContent = `${Math.round(volume * 100)}%`;
@@ -801,9 +964,11 @@ class MusicPlayer {
         if (results.length === 0) {
             this.elements.playlist.innerHTML = `
                 <li style="text-align: center; padding: 20px; color: var(--text-secondary);">
-                    未找到匹配 “${this.escapeHtml(query)}” 的歌曲
+                    未找到匹配 "${this.escapeHtml(query)}" 的歌曲
                 </li>
             `;
+            // 更新定位按钮状态
+            this.updateLocateButtonState();
             return;
         }
         
@@ -826,6 +991,11 @@ class MusicPlayer {
                 <div class="song-duration">${durationText}</div>
             `;
             
+            // 如果是当前播放的歌曲，添加active类
+            if (originalIndex === this.currentSongIndex) {
+                li.classList.add('active');
+            }
+            
             li.addEventListener('click', () => {
                 this.playSongAtIndex(originalIndex);
                 this.clearSearchResults();
@@ -835,6 +1005,9 @@ class MusicPlayer {
         });
 
         this.elements.playlist.appendChild(fragment);
+        
+        // 更新定位按钮状态
+        this.updateLocateButtonState();
     }
 
     // 高亮匹配文本
@@ -856,6 +1029,60 @@ class MusicPlayer {
         if (this.elements.clearSearchBtn) {
             this.elements.clearSearchBtn.style.display = query ? 'block' : 'none';
         }
+
+        if (!query) {
+            if (this.elements.searchSuggestions) {
+                this.elements.searchSuggestions.style.display = 'none';
+                this.elements.searchSuggestions.innerHTML = '';
+            }
+            return;
+        }
+
+        // Filter songs for suggestions (simple local filter)
+        const suggestions = this.songs.filter(song =>
+            song.title.toLowerCase().includes(query.toLowerCase()) ||
+            song.artist.toLowerCase().includes(query.toLowerCase())
+        ).slice(0, 5); // Limit to 5 suggestions
+
+        this.displaySearchSuggestions(suggestions, query);
+    }
+
+    // 新增：显示实时搜索建议
+    displaySearchSuggestions(suggestions, query) {
+        if (!this.elements.searchSuggestions) return;
+
+        this.elements.searchSuggestions.innerHTML = '';
+        if (suggestions.length === 0 && query) {
+            this.elements.searchSuggestions.style.display = 'none';
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        suggestions.forEach(song => {
+            const originalIndex = this.songs.indexOf(song);
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            item.innerHTML = `
+                <span class="suggestion-title">${this.highlightMatch(song.title, query)}</span>
+                <span class="suggestion-artist" style="font-size: 0.8em; color: var(--text-secondary); margin-left: 8px;">${this.highlightMatch(song.artist, query)}</span>
+            `;
+            item.addEventListener('click', () => {
+                if (this.elements.searchInput) {
+                    this.elements.searchInput.value = `${song.title} - ${song.artist}`;
+                }
+                this.playSongAtIndex(originalIndex);
+                if (this.elements.searchSuggestions) {
+                    this.elements.searchSuggestions.style.display = 'none';
+                }
+                if (this.elements.clearSearchBtn) {
+                     this.elements.clearSearchBtn.style.display = 'block';
+                }
+            });
+            fragment.appendChild(item);
+        });
+
+        this.elements.searchSuggestions.appendChild(fragment);
+        this.elements.searchSuggestions.style.display = suggestions.length > 0 ? 'block' : 'none';
     }
 
     // 清除搜索结果
@@ -866,6 +1093,9 @@ class MusicPlayer {
         }
         if (this.elements.clearSearchBtn) {
             this.elements.clearSearchBtn.style.display = 'none';
+        }
+        if (this.elements.searchSuggestions) {
+            this.elements.searchSuggestions.style.display = 'none';
         }
         this.updatePlaylist();
     }
@@ -965,6 +1195,45 @@ class MusicPlayer {
         });
         
         this.savePlaylist();
+    }
+
+    // 新增：定位到当前播放歌曲
+    locateCurrentSong() {
+        if (this.songs.length === 0 || this.isSearching) {
+            // 如果正在搜索状态，先清除搜索结果
+            if (this.isSearching) {
+                this.clearSearchResults();
+                // 给一点时间让DOM更新
+                setTimeout(() => {
+                    this.scrollToCurrentSong();
+                }, 100);
+            }
+            return;
+        }
+
+        this.scrollToCurrentSong();
+    }
+
+    // 新增：滚动到当前歌曲位置
+    scrollToCurrentSong() {
+        if (!this.elements.playlist || this.songs.length === 0) return;
+
+        const currentItem = this.elements.playlist.children[this.currentSongIndex];
+        if (currentItem) {
+            // 高亮效果
+            currentItem.classList.add('locate-highlight');
+            
+            // 滚动到位置，确保歌曲在可视区域中央
+            currentItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
+            // 移除高亮效果
+            setTimeout(() => {
+                currentItem.classList.remove('locate-highlight');
+            }, 2000);
+        }
     }
 }
 

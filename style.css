@@ -226,8 +226,8 @@ body {
 
 .album-cover {
     position: relative;
-    width: 240px;
-    height: 240px;
+    width: 220px;   /* 调整为更适合整体布局的正方形尺寸 */
+    height: 220px;
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--shadow-medium);
@@ -235,17 +235,14 @@ body {
     border: 2px solid var(--border-color);
     background: var(--hover-color);
     transition: var(--transition);
-}
-
-.album-cover:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-heavy);
+    aspect-ratio: 1 / 1; /* 保证始终为正方形，兼容性好时可用 */
 }
 
 .album-cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    aspect-ratio: 1 / 1; /* 保证图片为正方形 */
     transition: var(--transition);
 }
 
@@ -324,41 +321,96 @@ body {
 .progress-container {
     width: 100%;
     margin-bottom: 20px;
+    position: relative;
+    padding: 8px 0; /* 增加点击区域 */
 }
 
 .progress-bar {
     position: relative;
-    height: 8px;
+    height: 6px;
     background: var(--border-color);
-    border-radius: 4px;
+    border-radius: 3px;
     cursor: pointer;
-    overflow: hidden;
+    overflow: visible; /* 允许滑块溢出 */
+    transition: var(--transition);
+}
+
+.progress-bar:hover {
+    height: 8px; /* 悬停时稍微增大 */
+    transform: none; /* 移除之前的scaleY变换 */
 }
 
 #progress {
     height: 100%;
     background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-    border-radius: 4px;
-    width: 0;
+    border-radius: 3px;
+    width: 0%;
     transition: width 0.1s linear;
+    position: relative;
 }
 
 .progress-handle {
     position: absolute;
     top: 50%;
+    right: -8px; /* 定位在进度条右端 */
     transform: translateY(-50%);
     width: 16px;
     height: 16px;
-    background: var(--primary-color);
+    background: white;
+    border: 2px solid var(--primary-color);
     border-radius: 50%;
     opacity: 0;
     transition: var(--transition);
-    left: 0;
+    box-shadow: var(--shadow-light);
+    cursor: grab;
 }
 
-.progress-bar:hover .progress-handle {
-    opacity: 1;
+.progress-handle:active {
+    cursor: grabbing;
 }
+
+.progress-bar:hover .progress-handle,
+.progress-container:hover .progress-handle {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Progress Tooltip */
+.progress-tooltip {
+    position: absolute;
+    bottom: 32px; /* 调整位置避免与进度条重叠 */
+    left: 0;
+    transform: translateX(-50%);
+    background-color: var(--text-color);
+    color: var(--card-bg);
+    padding: 6px 10px;
+    border-radius: var(--border-radius-small);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: var(--shadow-light);
+}
+
+.progress-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--text-color);
+}
+
+.progress-container:hover .progress-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
 
 /* 播放列表 */
 .playlist-container {
@@ -396,6 +448,7 @@ body {
     gap: 4px; /* 更紧凑 */
     align-items: center;
     margin-left: 12px;
+    flex-wrap: wrap; /* 允许换行 */
 }
 
 .playlist-controls button {
@@ -410,18 +463,36 @@ body {
     transition: var(--transition);
     display: flex;
     align-items: center;
+    justify-content: center; /* 确保图标居中 */
     gap: 4px;
     min-width: 32px;
     min-height: 32px;
+    flex-shrink: 0; /* 防止按钮被压缩 */
 }
 
-.playlist-controls button span {
-    display: none; /* 只显示图标，去除文字 */
+.playlist-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.playlist-controls button:hover {
+.playlist-controls button:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.28);
     transform: translateY(-1px) scale(1.08);
+}
+
+/* 定位按钮特殊状态 */
+.playlist-controls button.search-mode {
+    background: rgba(255, 255, 255, 0.35);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        background: rgba(255, 255, 255, 0.35); 
+    }
+    50% { 
+        background: rgba(255, 255, 255, 0.5); 
+    }
 }
 
 .playlist-content {
@@ -678,233 +749,81 @@ button:active {
     margin: 0 2px; /* 添加一些间距 */
 }
 
-.volume-text {
-    font-size: 12px;
-    color: var(--text-secondary);
-    min-width: 28px;
-    text-align: right;
-    margin-left: 2px;
-    user-select: none;
+/* 移动端控制按钮区域 */
+.mobile-controls {
+    display: none; /* 默认隐藏，只在移动端显示 */
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 浮动按钮 */
-.floating-buttons {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    z-index: 999;
-}
-
-.theme-toggle,
-.fullscreen-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    color: var(--text-color);
+.mobile-main-controls {
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: var(--shadow-medium);
-    border: 1px solid var(--border-color);
-    font-size: 20px;
-    transition: var(--transition);
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
-.theme-toggle:hover,
-.fullscreen-btn:hover {
-    background: var(--hover-color);
-    color: var(--primary-color);
-    transform: scale(1.1);
-}
-
-/* 通知系统 */
-.notification-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    pointer-events: none;
-}
-
-.notification {
-    background: var(--card-bg);
-    color: var(--text-color);
-    padding: 16px 20px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-medium);
-    border: 1px solid var(--border-color);
-    min-width: 220px;
-    max-width: 400px;
-    transform: translateX(100%);
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    pointer-events: auto;
-    word-break: break-word;
-}
-
-.notification.show {
-    transform: translateX(0);
-}
-
-.notification-success {
-    border-left: 4px solid #10b981;
-}
-
-.notification-error {
-    border-left: 4px solid #ef4444;
-}
-
-.notification-info {
-    border-left: 4px solid var(--primary-color);
-}
-
-.notification-warning {
-    border-left: 4px solid #f59e0b;
-}
-
-/* 搜索建议 */
-#search-suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
-    box-shadow: var(--shadow-medium);
-    z-index: 1000;
-    max-height: 240px;
-    overflow-y: auto;
-    animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.suggestion-item {
-    padding: 12px 16px;
-    cursor: pointer;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: var(--transition);
-}
-
-.suggestion-item:hover {
-    background: var(--hover-color);
-}
-
-.suggestion-item:last-child {
-    border-bottom: none;
-}
-
-/* 修复专辑区域类名 */
-.album-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 280px;
-}
-
-/* 修复控制组布局 */
-.control-group.left {
-    flex: 1;
-    justify-content: flex-start;
-}
-
-.control-group.right {
-    flex: 1;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-}
-
-/* 修复播放列表内容区域 */
-.playlist-content {
-    flex: 1;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    background: var(--card-bg);
-}
-
-/* 修复通知样式 */
-.notification-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    pointer-events: none;
-}
-
-.notification {
-    background: var(--card-bg);
-    color: var(--text-color);
-    padding: 16px 20px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-medium);
-    border: 1px solid var(--border-color);
-    min-width: 220px;
-    max-width: 400px;
-    transform: translateX(100%);
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    pointer-events: auto;
-    word-break: break-word;
-}
-
-.notification.show {
-    transform: translateX(0);
-}
-
-.notification-success {
-    border-left: 4px solid #10b981;
-}
-
-.notification-error {
-    border-left: 4px solid #ef4444;
-}
-
-.notification-info {
-    border-left: 4px solid var(--primary-color);
-}
-
-.notification-warning {
-    border-left: 4px solid #f59e0b;
-}
-
-/* 修复mark标签样式 */
-mark {
-    background: var(--primary-color);
+.mobile-control-btn {
+    min-width: 44px;
+    min-height: 44px;
+    background: rgba(255, 255, 255, 0.15);
     color: white;
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-weight: 500;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: var(--transition);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(10px);
+}
+
+.mobile-control-btn:hover,
+.mobile-control-btn:active {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(0.95);
+}
+
+.mobile-play-pause-btn {
+    min-width: 56px;
+    min-height: 56px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--primary-color);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 24px;
+    transition: var(--transition);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: var(--shadow-light);
+}
+
+.mobile-play-pause-btn:hover,
+.mobile-play-pause-btn:active {
+    background: white;
+    transform: scale(0.95);
+}
+
+.mobile-volume-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+    border-radius: 24px;
+    backdrop-filter: blur(10px);
+}
+
+.mobile-volume-controls .mobile-control-btn {
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.2);
 }
 
 /* 响应式布局优化 */
@@ -937,12 +856,19 @@ mark {
         min-width: auto;
         width: 100%;
         padding-bottom: 16px; /* 调整专辑区域底部内边距 */
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* 确保专辑区域内容居中 */
+        justify-content: center;
     }
 
     .album-cover {
-        width: 160px; /* 缩小专辑封面 */
-        height: 160px;
-        margin-bottom: 16px; /* 调整封面下方外边距 */
+        width: 140px;
+        height: 140px;
+        aspect-ratio: 1 / 1;
+        margin-bottom: 16px;
+        margin-left: auto; /* 确保专辑封面居中 */
+        margin-right: auto;
     }
 
     .song-info {
@@ -966,22 +892,29 @@ mark {
     }
 
     .playlist-header {
-        padding: 12px 16px; /* 调整播放列表头部内边距 */
+        padding: 12px 16px;
+        flex-wrap: wrap; /* 允许标题和控制按钮换行 */
+        gap: 8px; /* 添加换行时的间距 */
     }
 
     .playlist-header h2 {
-        font-size: 16px; /* 调整播放列表标题字号 */
+        font-size: 16px;
+        flex: 1; /* 标题优先占用空间 */
+        min-width: 120px; /* 最小宽度确保标题可读 */
+    }
+    
+    .playlist-controls {
+        margin-left: 0; /* 移除左边距 */
+        gap: 6px; /* 稍微增加按钮间距 */
+        flex: 0 0 auto; /* 控制按钮组不伸缩 */
+        justify-content: flex-end; /* 右对齐 */
     }
 
-    #playlist li {
-        padding: 12px 16px; /* 调整播放列表项内边距 */
-    }
-
-    .song-title { /* 播放列表中的歌曲标题 */
+    .playlist-controls button {
+        min-width: 30px; /* 减小最小宽度 */
+        min-height: 30px;
         font-size: 14px;
-    }
-    .song-artist { /* 播放列表中的歌手 */
-        font-size: 12px;
+        padding: 5px 8px;
     }
     
     .controls {
@@ -990,42 +923,113 @@ mark {
         padding: 12px 16px; /* 调整控制栏内边距 */
     }
 
-    /* 在768px及以下屏幕隐藏音量滑动条和文本，只留图标 */
-    .control-group.right .volume-slider,
-    .control-group.right .volume-text,
-    .control-group.right .volume-adjust-btn { /* 新增：隐藏手动调节按钮 */
+    .progress-container {
+        padding: 12px 0; /* 移动端增大触摸区域 */
+        margin-bottom: 16px;
+    }
+    
+    .progress-bar {
+        height: 8px; /* 移动端默认更粗 */
+    }
+    
+    .progress-bar:hover {
+        height: 8px; /* 移动端保持一致 */
+    }
+    
+    .progress-handle {
+        width: 20px; /* 移动端更大的滑块 */
+        height: 20px;
+        right: -10px;
+    }
+    
+    .progress-tooltip {
+        bottom: 40px;
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+    
+    /* 显示移动端控制按钮 */
+    .mobile-controls {
+        display: block;
+    }
+    
+    /* 隐藏底部控制栏 */
+    .controls {
         display: none;
     }
     
-    .main-controls {
-        gap: 12px; /* 调整主要控制按钮间距 */
+    .playlist-container {
+        /* max-height: 250px; */ /* 此处也移除，让flex控制 */
+        min-height: 150px; /* 保留一个合理的最小高度 */
+        border-radius: var(--border-radius-small); /* 为播放列表添加小圆角 */
+        margin-bottom: 12px; /* 调整播放列表下方外边距 */
+        flex-grow: 1; /* 确保在移动端垂直布局时也能正确分配空间 */
     }
 
-    .play-pause-btn {
-        width: 48px; /* 调整播放暂停按钮大小 */
-        height: 48px;
-        font-size: 20px; /* 调整播放暂停按钮图标大小 */
+    .playlist-header {
+        padding: 12px 16px;
+        flex-wrap: wrap; /* 允许标题和控制按钮换行 */
+        gap: 8px; /* 添加换行时的间距 */
     }
 
-    .volume-btn { /* 音量图标按钮 */
-        min-width: 28px;
-        min-height: 28px;
-        font-size: 18px;
+    .playlist-header h2 {
+        font-size: 16px;
+        flex: 1; /* 标题优先占用空间 */
+        min-width: 120px; /* 最小宽度确保标题可读 */
+    }
+    
+    .playlist-controls {
+        margin-left: 0; /* 移除左边距 */
+        gap: 6px; /* 稍微增加按钮间距 */
+        flex: 0 0 auto; /* 控制按钮组不伸缩 */
+        justify-content: flex-end; /* 右对齐 */
     }
 
-    .floating-buttons {
-        bottom: 16px; /* 调整浮动按钮位置 */
-        right: 16px;
-        gap: 10px; /* 调整浮动按钮间距 */
+    .playlist-controls button {
+        min-width: 30px; /* 减小最小宽度 */
+        min-height: 30px;
+        font-size: 14px;
+        padding: 5px 8px;
+    }
+    
+    .controls {
+        flex-wrap: wrap;
+        gap: 12px; /* 调整控制按钮组间距 */
+        padding: 12px 16px; /* 调整控制栏内边距 */
     }
 
-    .theme-toggle,
-    .fullscreen-btn {
-        width: 40px; /* 调整浮动按钮大小 */
-        height: 40px;
-        font-size: 18px; /* 调整浮动按钮图标大小 */
+    /* 移动端控制按钮优化 */
+    .mobile-controls {
+        padding: 12px 16px;
     }
-
+    
+    .mobile-main-controls {
+        gap: 12px;
+    }
+    
+    .mobile-control-btn {
+        min-width: 40px;
+        min-height: 40px;
+        font-size: 16px;
+    }
+    
+    .mobile-play-pause-btn {
+        min-width: 48px;
+        min-height: 48px;
+        font-size: 20px;
+    }
+    
+    .mobile-volume-controls {
+        gap: 6px;
+        padding: 6px 10px;
+    }
+    
+    .mobile-volume-controls .mobile-control-btn {
+        min-width: 32px;
+        min-height: 32px;
+        font-size: 12px;
+    }
+    
     .playlist-empty {
         padding: 24px 12px; /* 调整空播放列表提示内边距 */
     }
@@ -1074,9 +1078,12 @@ mark {
     }
     
     .album-cover {
-        width: 120px; /* 进一步缩小专辑封面 */
-        height: 120px;
+        width: 90px;
+        height: 90px;
+        aspect-ratio: 1 / 1;
         margin-bottom: 12px;
+        margin-left: auto; /* 确保居中 */
+        margin-right: auto;
     }
 
     #song-title {
@@ -1087,12 +1094,33 @@ mark {
         font-size: 13px; /* 进一步调整歌手名字号 */
     }
 
-    .progress-bar {
-        height: 6px; /* 调整进度条高度 */
+    .progress-container {
+        padding: 16px 0; /* 小屏幕进一步增大触摸区域 */
+        margin-bottom: 12px;
     }
+    
+    .progress-bar {
+        height: 10px; /* 小屏幕更粗的进度条便于操作 */
+    }
+    
     .progress-handle {
-        width: 12px; /* 调整进度条滑块大小 */
-        height: 12px;
+        width: 24px; /* 小屏幕更大的滑块 */
+        height: 24px;
+        right: -12px;
+    }
+    
+    .progress-tooltip {
+        bottom: 45px;
+        font-size: 16px;
+        padding: 10px 14px;
+    }
+    
+    .album-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* 强制居中对齐 */
+        justify-content: center;
+        text-align: center; /* 文本也居中 */
     }
     
     .playlist-container {
@@ -1103,123 +1131,210 @@ mark {
 
     .playlist-header {
         padding: 10px 12px;
+        flex-direction: column; /* 小屏幕垂直布局 */
+        align-items: stretch; /* 拉伸对齐 */
+        gap: 8px;
     }
+
     .playlist-header h2 {
         font-size: 15px;
-    }
-    .playlist-controls button {
-        min-width: 28px;
-        min-height: 28px;
-        font-size: 14px;
-    }
-
-
-    #playlist li {
-        padding: 10px 12px;
-    }
-    .song-title {
-        font-size: 13px;
-    }
-    .song-artist {
-        font-size: 11px;
-    }
-    .song-duration {
-        font-size: 11px;
+        text-align: center; /* 标题居中 */
+        margin-bottom: 4px;
     }
     
-    .controls {
-        padding: 10px 12px; /* 调整控制栏内边距 */
-        justify-content: center; /* 控制按钮组整体居中 */
-        gap: 10px; /* 调整控制按钮组间距 */
+    .playlist-controls {
+        justify-content: center; /* 按钮组居中 */
+        gap: 8px; /* 增加按钮间距便于触摸 */
+        margin: 0; /* 重置边距 */
+    }
+    
+    .playlist-controls button {
+        min-width: 36px; /* 增大触摸目标 */
+        min-height: 36px;
+        font-size: 14px;
+        padding: 8px;
+        border-radius: 8px; /* 增大圆角 */
+    }
+
+    /* 优化主控制按钮区域 */
+    .main-controls {
+        order: -1;
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 12px; /* 增加与下方的间距 */
+        gap: 16px; /* 增加按钮间距 */
     }
     
     .control-group.left,
     .control-group.right {
-        flex: 0 0 auto; /* 控制组不再伸缩，根据内容自动调整宽度 */
+        flex: 0 0 auto;
+        gap: 12px; /* 增加控制组内部按钮间距 */
     }
     
-    .main-controls {
-        order: -1; /* 将主要控制按钮移到最前（视觉上在上方）*/
-        width: 100%; /* 主要控制按钮占满一行 */
-        justify-content: center; /* 主要控制按钮居中 */
-        margin-bottom: 8px; /* 与下方控制组的间距 */
-        gap: 10px;
+    /* 确保所有控制按钮都有足够的触摸目标 */
+    .controls button {
+        min-width: 44px; /* iOS推荐的最小触摸目标 */
+        min-height: 44px;
+        padding: 10px;
+        font-size: 18px;
     }
     
     .play-pause-btn {
-        width: 40px; /* 进一步调整播放暂停按钮大小 */
-        height: 40px;
+        width: 50px; /* 主播放按钮更大 */
+        height: 50px;
+        font-size: 20px;
+    }
+
+    .volume-btn {
+        min-width: 40px;
+        min-height: 40px;
         font-size: 18px;
     }
 
-    button { /* 通用按钮调整 */
-        font-size: 16px;
-        padding: 6px;
+    .control-group.right .volume-adjust-btn {
+        display: inline-flex !important;
+        min-width: 40px;
+        min-height: 40px;
+        font-size: 18px;
+        padding: 8px;
+        border-radius: 8px; /* 增大圆角便于视觉识别 */
     }
     
-    .volume-btn { /* 音量图标按钮 */
-        min-width: 24px;
-        min-height: 24px;
-        font-size: 16px;
-    }
-
-    /* 确保在更小屏幕上也隐藏新增按钮，如果未被上述规则覆盖 */
-    .control-group.right .volume-adjust-btn {
-        display: none;
-    }
-
-    .notification {
-        min-width: calc(100vw - 32px); /* 通知宽度适应屏幕 */
-        max-width: calc(100vw - 32px);
-        padding: 12px 16px;
-        font-size: 14px;
-    }
-
     .floating-buttons {
-        bottom: 10px;
-        right: 10px;
-        gap: 8px;
+        bottom: 12px;
+        right: 12px;
+        gap: 10px;
+        flex-direction: row; /* 小屏幕改为水平布局 */
     }
 
     .theme-toggle,
     .fullscreen-btn {
-        width: 36px;
-        height: 36px;
+        width: 44px; /* 增大触摸目标 */
+        height: 44px;
+        font-size: 18px;
+    }
+
+    .playlist-empty {
+        padding: 24px 12px; /* 调整空播放列表提示内边距 */
+    }
+    .playlist-empty i {
+        font-size: 40px; /* 调整空播放列表图标大小 */
+    }
+    .playlist-empty p {
+        font-size: 14px; /* 调整空播放列表文字大小 */
+    }
+}
+
+/* 新增：触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+    /* 针对触摸设备的特殊优化 */
+    button {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px;
+    }
+    
+    .playlist-controls button {
+        min-width: 40px;
+        min-height: 40px;
+        padding: 8px;
+        gap: 2px;
+    }
+    
+    /* 增强按钮反馈 */
+    button:active {
+        transform: scale(0.92);
+        background: var(--primary-color) !important;
+        color: white !important;
+    }
+    
+    .playlist-controls button:active {
+        background: rgba(255, 255, 255, 0.4) !important;
+        transform: scale(0.92);
+    }
+    
+    .play-pause-btn:active {
+        transform: scale(0.95);
+    }
+    
+    /* 移动端控制按钮触摸反馈 */
+    .mobile-control-btn:active {
+        transform: scale(0.92);
+        background: rgba(255, 255, 255, 0.35) !important;
+    }
+    
+    .mobile-play-pause-btn:active {
+        transform: scale(0.95);
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+}
+
+/* 超小屏幕（宽度小于360px）的特殊优化 */
+@media (max-width: 360px) {
+    .playlist-header {
+        padding: 8px 10px;
+    }
+    
+    .playlist-controls {
+        gap: 6px;
+    }
+    
+    .playlist-controls button {
+        min-width: 32px;
+        min-height: 32px;
+        font-size: 13px;
+        padding: 6px;
+    }
+    
+    .controls {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+    
+    .control-group.left,
+    .control-group.right {
+        gap: 8px;
+    }
+    
+    .main-controls {
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .play-pause-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+    }
+    
+    .controls button {
+        min-width: 40px;
+        min-height: 40px;
         font-size: 16px;
     }
 }
 
-/* 触摸优化：增大可点击区域，禁用双击缩放 */
-button,
-input[type="button"], /* 确保所有按钮类型都包含 */
-input[type="submit"],
-.volume-bar,
-#playlist li,
-.progress-bar { /* 为进度条也添加触摸优化 */
-    touch-action: manipulation; /* 优化触摸响应，禁用双击缩放等 */
-    -webkit-tap-highlight-color: rgba(0,0,0,0.08); /* 定义点击时的高亮颜色 */
-}
+/* 音量控制 - 移动端优化：显示加减按钮，隐藏滑动条和百分比 */
+/* 这些规则已包含在上面的 768px 和 480px 媒体查询中，此处可视为冗余或确认 */
+/* @media (max-width: 768px) { */
+/* .control-group.right .volume-slider, */
+/* .control-group.right .volume-text { */
+/* display: none; */
+/* } */
+/* .control-group.right .volume-adjust-btn { */
+/* display: inline-flex !important; */
+/* } */
+/* } */
 
-
-/* 滚动条美化 */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--bg-color);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--primary-color);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-hover);
-}
+/* @media (max-width: 480px) { */
+/* .control-group.right .volume-slider, */
+/* .control-group.right .volume-text { */
+/* display: none; */
+/* } */
+/* .control-group.right .volume-adjust-btn { */
+/* display: inline-flex !important; */
+/* } */
+/* } */
 
 /* 修复loading动画性能 */
 @keyframes spin {
@@ -1239,9 +1354,9 @@ input[type="submit"],
     transition: var(--transition);
 }
 
-.progress-bar:hover,
-.volume-bar:hover {
-    transform: scaleY(1.2);
+.progress-bar:active .progress-handle {
+    transform: translateY(-50%) scale(1.2);
+    opacity: 1;
 }
 
 /* 修复浮动按钮层级 */
@@ -1264,55 +1379,32 @@ input[type="submit"],
     user-select: text;
 }
 
-/* 版权信息样式 */
-.copyright-footer {
-    text-align: center;
-    padding: 15px 0;
-    font-size: 12px;
-    color: var(--text-secondary);
-    width: 100%;
-    /* position: fixed; */ /* 移除固定定位 */
-    /* bottom: 0; */ /* 移除 */
-    /* left: 0; */ /* 移除 */
-    background-color: var(--bg-color);
-    /* z-index: 1; */ /* 移除 */
-    border-top: 1px solid var(--border-color);
-    transition: var(--transition);
-    margin-top: 20px; /* 在播放器和页脚之间添加一些间距 */
+#playlist li.locate-highlight {
+    background: var(--primary-color) !important;
+    color: white !important;
+    transform: translateX(4px) !important;
+    box-shadow: var(--shadow-medium);
+    animation: locateHighlight 2s ease-out;
 }
 
-.copyright-footer a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 500;
+#playlist li.locate-highlight .song-title,
+#playlist li.locate-highlight .song-artist,
+#playlist li.locate-highlight .song-duration {
+    color: white !important;
 }
 
-.copyright-footer a:hover {
-    text-decoration: underline;
-    color: var(--primary-hover);
-}
-
-/* 响应式调整版权信息 */
-@media (max-width: 768px) {
-    .copyright-footer {
-        font-size: 11px;
-        padding: 10px 0;
-        margin-top: 15px;
+@keyframes locateHighlight {
+    0% {
+        background: var(--primary-color);
+        transform: translateX(4px) scale(1.02);
     }
-    body {
-        /* padding-bottom: 50px; */ /* 移除 */
-        padding: 8px; /* 保持其他内边距调整 */
+    50% {
+        background: var(--secondary-color);
+        transform: translateX(6px) scale(1.02);
+    }
+    100% {
+        background: var(--primary-color);
+        transform: translateX(4px) scale(1);
     }
 }
 
-@media (max-width: 480px) {
-    .copyright-footer {
-        font-size: 10px;
-        padding: 8px 0;
-        margin-top: 10px;
-    }
-    body {
-        /* padding-bottom: 45px; */ /* 移除 */
-        padding: 4px; /* 保持其他内边距调整 */
-    }
-}

@@ -9,10 +9,10 @@
 </head>
 <body>
     <!-- 加载指示器 -->
-    <div id="loading-indicator" class="loading-overlay">
+    <!-- <div id="loading-indicator" class="loading-overlay">
         <div class="loading-spinner"></div>
         <p>加载中...</p>
-    </div>
+    </div> -->
 
     <div class="player-container">
         <!-- 顶部搜索栏 -->
@@ -25,6 +25,7 @@
                 <button id="clear-search-btn" class="clear-search-btn" title="清除搜索" style="display: none;">
                     <i class="fas fa-times"></i>
                 </button>
+                <div id="search-suggestions" style="display: none;"></div>
             </div>
         </header>
 
@@ -56,14 +57,47 @@
                         <div id="progress"></div>
                         <div class="progress-handle"></div>
                     </div>
+                    <div id="progress-tooltip" class="progress-tooltip">0:00</div>
                 </div>
             </section>
 
             <!-- 右侧：播放列表 -->
             <aside class="playlist-container">
+                <!-- 移动端控制按钮区域 -->
+                <div class="mobile-controls">
+                    <div class="mobile-main-controls">
+                        <button id="mobile-play-mode-btn" class="mobile-control-btn" title="播放模式">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+                        <button id="mobile-prev-btn" class="mobile-control-btn" title="上一首">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button id="mobile-play-btn" class="mobile-play-pause-btn" title="播放/暂停">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button id="mobile-next-btn" class="mobile-control-btn" title="下一首">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                        <div class="mobile-volume-controls">
+                            <button id="mobile-volume-icon" class="mobile-control-btn volume-btn" title="静音/取消静音">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                            <button id="mobile-volume-down-btn" class="mobile-control-btn volume-adjust-btn" title="减小音量">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button id="mobile-volume-up-btn" class="mobile-control-btn volume-adjust-btn" title="增大音量">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="playlist-header">
                     <h2>播放列表</h2>
                     <div class="playlist-controls">
+                        <button id="locate-current-btn" title="定位当前播放">
+                            <i class="fas fa-crosshairs"></i>
+                        </button>
                         <button id="add-music-btn" title="添加音乐">
                             <i class="fas fa-plus"></i>
                         </button>

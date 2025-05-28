@@ -1,5 +1,7 @@
 # 简单的 JavaScript 音乐播放器
 
+
+
 本项目是一个基于原生 JavaScript、HTML 和 CSS 实现的响应式音乐播放器，支持本地音乐添加、播放列表管理、搜索、顺序/随机/单曲循环播放等功能。适合初学者学习 Web 前端开发、音频 API 应用和响应式布局设计。
 
 ## 功能特性
@@ -41,7 +43,7 @@
 
 ## 效果预览
 
-![播放器界面预览](https://user-images.githubusercontent.com/your-image.png)
+![image](https://s1.imagehub.cc/images/2025/05/28/1f96d34d5d45d78acb29689c3bb8e13e.png)  
 
 ## 扩展建议
 

@@ -943,17 +943,97 @@ class MusicPlayer {
         }
         
         this.isSearching = true;
-        const results = this.songs.filter(song => 
-            song.title.toLowerCase().includes(query.toLowerCase()) ||
-            song.artist.toLowerCase().includes(query.toLowerCase())
-        );
+        
+        // 更宽松的搜索匹配
+        const results = this.songs.filter(song => {
+            const title = (song.title || '').toLowerCase();
+            const artist = (song.artist || '').toLowerCase();
+            const searchQuery = query.toLowerCase();
+            
+            // 多种匹配方式
+            return title.includes(searchQuery) || 
+                   artist.includes(searchQuery) ||
+                   `${title} ${artist}`.includes(searchQuery) ||
+                   `${artist} ${title}`.includes(searchQuery) ||
+                   // 分词搜索
+                   searchQuery.split(' ').every(word => 
+                       title.includes(word) || artist.includes(word)
+                   );
+        });
+        
+        // 隐藏搜索建议
+        if (this.elements.searchSuggestions) {
+            this.elements.searchSuggestions.style.display = 'none';
+        }
         
         this.displaySearchResults(results, query);
+        this.updateLocateButtonState();
     }
 
-    // 显示搜索结果
+    // 显示搜索建议 - 修复HTML结构
+    displaySearchSuggestions(suggestions, query) {
+        if (!this.elements.searchSuggestions) return;
+
+        this.elements.searchSuggestions.innerHTML = '';
+        
+        if (suggestions.length === 0) {
+            this.elements.searchSuggestions.style.display = 'none';
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        suggestions.forEach(song => {
+            const originalIndex = this.songs.indexOf(song);
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            
+            // 修复HTML结构
+            item.innerHTML = `
+                <div class="suggestion-content">
+                    <div class="suggestion-title">${this.highlightMatch(song.title || '未知标题', query)}</div>
+                    <div class="suggestion-artist">${this.highlightMatch(song.artist || '未知歌手', query)}</div>
+                </div>
+            `;
+            
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 直接播放选中的歌曲，不修改搜索框
+                this.playSongAtIndex(originalIndex);
+                
+                // 隐藏建议框
+                if (this.elements.searchSuggestions) {
+                    this.elements.searchSuggestions.style.display = 'none';
+                }
+            });
+            
+            fragment.appendChild(item);
+        });
+
+        this.elements.searchSuggestions.appendChild(fragment);
+        this.elements.searchSuggestions.style.display = 'block';
+    }
+
+    // 高亮匹配文本 - 更安全的处理
+    highlightMatch(text, query) {
+        if (!query || !text) return this.escapeHtml(text || '');
+        
+        try {
+            const regex = new RegExp(`(${this.escapeRegex(query)})`, 'gi');
+            return this.escapeHtml(text).replace(regex, '<mark>$1</mark>');
+        } catch (e) {
+            // 如果正则表达式出错，返回原文本
+            console.warn('正则表达式错误:', e);
+            return this.escapeHtml(text);
+        }
+    }
+
+    // 显示搜索结果 - 添加调试信息
     displaySearchResults(results, query) {
         if (!this.elements.playlist) return;
+
+        console.log('搜索结果:', results.length, '总歌曲数:', this.songs.length, '查询:', query);
 
         if (this.elements.playlistEmpty) {
             this.elements.playlistEmpty.style.display = 'none';
@@ -964,10 +1044,15 @@ class MusicPlayer {
         if (results.length === 0) {
             this.elements.playlist.innerHTML = `
                 <li style="text-align: center; padding: 20px; color: var(--text-secondary);">
-                    未找到匹配 "${this.escapeHtml(query)}" 的歌曲
+                    <div style="margin-bottom: 8px;">
+                        <i class="fas fa-search" style="font-size: 24px; opacity: 0.5;"></i>
+                    </div>
+                    <div>未找到匹配 "${this.escapeHtml(query)}" 的歌曲</div>
+                    <div style="font-size: 12px; margin-top: 8px; opacity: 0.7;">
+                        共搜索了 ${this.songs.length} 首歌曲
+                    </div>
                 </li>
             `;
-            // 更新定位按钮状态
             this.updateLocateButtonState();
             return;
         }
@@ -983,10 +1068,11 @@ class MusicPlayer {
             } else if (typeof song.duration === 'string' && song.duration.trim() !== '') {
                 durationText = song.duration;
             }
+            
             li.innerHTML = `
                 <div class="song-details">
-                    <div class="song-title">${this.highlightMatch(song.title, query)}</div>
-                    <div class="song-artist">${this.highlightMatch(song.artist, query)}</div>
+                    <div class="song-title">${this.highlightMatch(song.title || '未知标题', query)}</div>
+                    <div class="song-artist">${this.highlightMatch(song.artist || '未知歌手', query)}</div>
                 </div>
                 <div class="song-duration">${durationText}</div>
             `;
@@ -998,106 +1084,13 @@ class MusicPlayer {
             
             li.addEventListener('click', () => {
                 this.playSongAtIndex(originalIndex);
-                this.clearSearchResults();
             });
             
             fragment.appendChild(li);
         });
 
         this.elements.playlist.appendChild(fragment);
-        
-        // 更新定位按钮状态
         this.updateLocateButtonState();
-    }
-
-    // 高亮匹配文本
-    highlightMatch(text, query) {
-        if (!query) return this.escapeHtml(text);
-        
-        const regex = new RegExp(`(${this.escapeRegex(query)})`, 'gi');
-        return this.escapeHtml(text).replace(regex, '<mark>$1</mark>');
-    }
-
-    // 转义正则表达式
-    escapeRegex(text) {
-        return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
-    // 处理搜索输入
-    handleSearchInput() {
-        const query = this.elements.searchInput?.value.trim();
-        if (this.elements.clearSearchBtn) {
-            this.elements.clearSearchBtn.style.display = query ? 'block' : 'none';
-        }
-
-        if (!query) {
-            if (this.elements.searchSuggestions) {
-                this.elements.searchSuggestions.style.display = 'none';
-                this.elements.searchSuggestions.innerHTML = '';
-            }
-            return;
-        }
-
-        // Filter songs for suggestions (simple local filter)
-        const suggestions = this.songs.filter(song =>
-            song.title.toLowerCase().includes(query.toLowerCase()) ||
-            song.artist.toLowerCase().includes(query.toLowerCase())
-        ).slice(0, 5); // Limit to 5 suggestions
-
-        this.displaySearchSuggestions(suggestions, query);
-    }
-
-    // 新增：显示实时搜索建议
-    displaySearchSuggestions(suggestions, query) {
-        if (!this.elements.searchSuggestions) return;
-
-        this.elements.searchSuggestions.innerHTML = '';
-        if (suggestions.length === 0 && query) {
-            this.elements.searchSuggestions.style.display = 'none';
-            return;
-        }
-
-        const fragment = document.createDocumentFragment();
-        suggestions.forEach(song => {
-            const originalIndex = this.songs.indexOf(song);
-            const item = document.createElement('div');
-            item.className = 'suggestion-item';
-            item.innerHTML = `
-                <span class="suggestion-title">${this.highlightMatch(song.title, query)}</span>
-                <span class="suggestion-artist" style="font-size: 0.8em; color: var(--text-secondary); margin-left: 8px;">${this.highlightMatch(song.artist, query)}</span>
-            `;
-            item.addEventListener('click', () => {
-                if (this.elements.searchInput) {
-                    this.elements.searchInput.value = `${song.title} - ${song.artist}`;
-                }
-                this.playSongAtIndex(originalIndex);
-                if (this.elements.searchSuggestions) {
-                    this.elements.searchSuggestions.style.display = 'none';
-                }
-                if (this.elements.clearSearchBtn) {
-                     this.elements.clearSearchBtn.style.display = 'block';
-                }
-            });
-            fragment.appendChild(item);
-        });
-
-        this.elements.searchSuggestions.appendChild(fragment);
-        this.elements.searchSuggestions.style.display = suggestions.length > 0 ? 'block' : 'none';
-    }
-
-    // 清除搜索结果
-    clearSearchResults() {
-        this.isSearching = false;
-        if (this.elements.searchInput) {
-            this.elements.searchInput.value = '';
-        }
-        if (this.elements.clearSearchBtn) {
-            this.elements.clearSearchBtn.style.display = 'none';
-        }
-        if (this.elements.searchSuggestions) {
-            this.elements.searchSuggestions.style.display = 'none';
-        }
-        this.updatePlaylist();
     }
 
     // 通知系统
